@@ -17,6 +17,14 @@ logger = logging.getLogger("e2b-fastmcp-server")
 mcp = FastMCP("e2b-code-mcp-server")
 
 
+def _to_str(value):
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return "".join(str(v) for v in value)
+    return str(value)
+
+
 @mcp.tool()
 def run_code(code: str) -> dict[str, str]:
     """在 E2B 沙箱中执行 Python 代码。"""
@@ -24,16 +32,19 @@ def run_code(code: str) -> dict[str, str]:
     execution = sandbox.run_code(code)
     logger.info("Sandbox execution finished")
 
-    stdout = getattr(execution.logs, "stdout", "") if getattr(execution, "logs", None) else ""
-    stderr = getattr(execution.logs, "stderr", "") if getattr(execution, "logs", None) else ""
+    raw_stdout = getattr(execution.logs, "stdout", "") if getattr(execution, "logs", None) else ""
+    raw_stderr = getattr(execution.logs, "stderr", "") if getattr(execution, "logs", None) else ""
+
+    stdout = _to_str(raw_stdout)
+    stderr = _to_str(raw_stderr)
 
     error = getattr(execution, "error", None)
     if error:
         raise RuntimeError(error)
 
     return {
-        "stdout": stdout or "",
-        "stderr": stderr or "",
+        "stdout": stdout,
+        "stderr": stderr,
     }
 
 if __name__ == "__main__":
